@@ -26,24 +26,39 @@ def construct_block(mempool):
         return True
 
     sorted_txids = sorted(mempool.keys(), key=lambda x: mempool[x]['fee'], reverse=True)
+    blocks = []
+    current_block_transactions = []
+    current_block_weight = 0
+
     for txid in sorted_txids:
         if block_weight + mempool[txid]['weight'] <= block_weight_limit and can_include(txid):
-            block_transactions.append(txid)
+            current_block_transactions.append(txid)
+            current_block_weight += mempool[txid]['weight']
             block_weight += mempool[txid]['weight']
+        else:
+            blocks.append(current_block_transactions)
+            current_block_transactions = [txid]
+            current_block_weight = mempool[txid]['weight']
+            block_weight = mempool[txid]['weight']
 
-    return block_transactions
+    # Add the last block if it's not empty
+    if current_block_transactions:
+        blocks.append(current_block_transactions)
 
-def write_block_transactions_to_file(block_transactions, file_path):
-    with open(file_path, 'w') as file:
-        for txid in block_transactions:
-            file.write(txid + '\n')
+    return blocks
+
+def write_blocks_to_files(blocks):
+    for i, block_transactions in enumerate(blocks):
+        output_file_path = f"./block_sample_{i}.txt"
+        with open(output_file_path, 'w') as file:
+            for txid in block_transactions:
+                file.write(txid + '\n')
 
 def main():
     mempool_file_path = "./mempool.csv"
     mempool = read_mempool_csv(mempool_file_path)
-    block_transactions = construct_block(mempool)
-    output_file_path = "./block_sample.txt"
-    write_block_transactions_to_file(block_transactions, output_file_path)
+    blocks = construct_block(mempool)
+    write_blocks_to_files(blocks)
 
 if __name__ == "__main__":
     main()
